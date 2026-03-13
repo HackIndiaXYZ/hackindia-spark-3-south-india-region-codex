@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentVerse ✦ AI Agent Marketplace</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Syne:wght@400..800&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        background: '#050510',
+                        card: '#111128',
+                        accent: '#6C63FF',
+                        teal: '#00F5D4',
+                        yellow: '#FFD93D',
+                        red: '#FF6B6B',
+                    },
+                    fontFamily: {
+                        syne: ['Syne', 'sans-serif'],
+                        sans: ['DM Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #050510;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        /* Noise Texture Overlay */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('https://grainy-gradients.vercel.app/noise.svg');
+            opacity: 0.05;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .glass {
+            background: rgba(17, 17, 40, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s ease-out;
+        }
+
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .feature-label {
+            font-family: 'Syne', sans-serif;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: #6C63FF;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #050510;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #6C63FF;
+            border-radius: 10px;
+        }
+
+        .nav-link {
+            position: relative;
+            transition: color 0.3s;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -4px;
+            left: 0;
+            background-color: #00F5D4;
+            transition: width 0.3s;
+        }
+        .nav-link:hover::after {
+            width: 100%;
+        }
+
+        @keyframes progress {
+            from { width: 0; }
+            to { width: var(--progress-width); }
+        }
+        .progress-bar {
+            animation: progress 1.5s ease-out forwards;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 2rem;
+            background: #00F5D4;
+            color: #050510;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transform: translateY(100px);
+            transition: transform 0.3s ease;
+            z-index: 10000;
+        }
+        .toast.show {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="font-sans">
+
+    <!-- API Key Input Modal/Overlay -->
+    <div id="apiKeySection" class="sticky top-0 z-[100] w-full glass p-3 flex justify-center items-center gap-4">
+        <span class="text-xs font-syne text-accent font-bold">ANTHROPIC API KEY:</span>
+        <input type="password" id="apiKeyInput" placeholder="sk-ant-..." class="bg-background border border-accent/30 rounded px-3 py-1 text-sm w-64 focus:outline-none focus:border-teal transition-all">
+        <p class="text-[10px] text-white/50 italic">Stored in session only</p>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="sticky top-[52px] z-50 glass px-6 py-4 flex justify-between items-center">
+        <div class="text-2xl font-syne font-extrabold tracking-tighter flex items-center gap-2">
+            <span class="text-accent">AgentVerse</span>
+            <span class="text-teal">✦</span>
+        </div>
+        <div class="hidden md:flex gap-8 text-sm font-medium">
+            <a href="#matchmaker" class="nav-link">Matchmaker</a>
+            <a href="#compare" class="nav-link">Compare</a>
+            <a href="#multi" class="nav-link">Multi-Prompt</a>
+            <a href="#ratings" class="nav-link">Ratings</a>
+            <a href="#builder" class="nav-link">Builder</a>
+        </div>
+        <button class="bg-accent hover:bg-accent/80 text-white px-6 py-2 rounded-full text-sm font-bold transition-all transform hover:scale-105">
+            Get Started
+        </button>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="relative h-[80vh] flex flex-col justify-center items-center text-center px-6 overflow-hidden">
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-accent/20 rounded-full blur-[120px] -z-10"></div>
+        <span class="feature-label">The Future of Student Productivity</span>
+        <h1 class="text-6xl md:text-8xl font-syne font-extrabold mb-6 tracking-tighter leading-none">
+            Find Your Perfect <br> <span class="text-teal">AI Sidekick.</span>
+        </h1>
+        <p class="text-lg md:text-xl text-white/70 max-w-2xl mb-10">
+            The ultimate marketplace for students to discover, compare, and build AI agents tailored for academic success.
+        </p>
+        <div class="flex gap-4">
+            <a href="#matchmaker" class="bg-teal text-background px-8 py-4 rounded-full font-bold hover:shadow-[0_0_20px_rgba(0,245,212,0.4)] transition-all">Try Matchmaker</a>
+            <a href="#builder" class="border border-white/20 px-8 py-4 rounded-full font-bold hover:bg-white/10 transition-all">Build Agent</a>
+        </div>
+    </header>
+
+    <!-- FEATURE 1: AI AGENT MATCHMAKER -->
+    <section id="matchmaker" class="py-24 px-6 max-w-7xl mx-auto reveal">
+        <span class="feature-label">Feature 01</span>
+        <h2 class="text-4xl font-syne font-bold mb-12">AI Agent Matchmaker ⭐</h2>
+        
+        <div class="glass p-8 rounded-3xl border-accent/20">
+            <p class="text-white/60 mb-6">Describe your academic challenge or goal, and our AI will find the best agents for you.</p>
+            <div class="flex flex-col md:flex-row gap-4 mb-8">
+                <input type="text" id="matchmakerInput" placeholder="e.g. I need help summarizing 50-page research papers and extracting data..." class="flex-1 bg-background border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-accent transition-all">
+                <button onclick="runMatchmaker()" id="matchmakerBtn" class="bg-accent text-white px-10 py-4 rounded-2xl font-bold hover:bg-accent/80 transition-all flex items-center justify-center gap-2">
+                    <span>Find Matches</span>
+                    <div id="matchmakerLoader" class="hidden w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                </button>
+            </div>
+
+            <div id="matchmakerResults" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Results will appear here -->
+                <div class="col-span-full text-center py-12 text-white/30 border-2 border-dashed border-white/5 rounded-3xl">
+                    Enter a problem above to see recommendations
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FEATURE 2: AI AGENT COMPARISON TABLE -->
+    <section id="compare" class="py-24 px-6 bg-card/30 reveal">
+        <div class="max-w-7xl mx-auto">
+            <span class="feature-label">Feature 02</span>
+            <h2 class="text-4xl font-syne font-bold mb-12">Agent Comparison Table</h2>
+            
+            <div class="overflow-x-auto glass rounded-3xl">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-white/10">
+                            <th class="p-6 font-syne uppercase text-xs tracking-widest text-white/50">Agent Name</th>
+                            <th class="p-6 font-syne uppercase text-xs tracking-widest text-white/50">Speed</th>
+                            <th class="p-6 font-syne uppercase text-xs tracking-widest text-white/50">Accuracy</th>
+                            <th class="p-6 font-syne uppercase text-xs tracking-widest text-white/50">Best Use Case</th>
+                            <th class="p-6 font-syne uppercase text-xs tracking-widest text-white/50">Cost</th>
+                            <th class="p-6 font-syne uppercase text-xs tracking-widest text-white/50">Rating</th>
+                        </tr>
+                    </thead>
+                    <tbody id="comparisonTableBody">
+                        <!-- Data injected by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- FEATURE 3: ONE PROMPT → MULTIPLE AGENTS -->
+    <section id="multi" class="py-24 px-6 max-w-7xl mx-auto reveal">
+        <span class="feature-label">Feature 03</span>
+        <h2 class="text-4xl font-syne font-bold mb-12">One Prompt → Multiple Agents</h2>
+        
+        <div class="glass p-8 rounded-3xl mb-12">
+            <div class="flex flex-col md:flex-row gap-4">
+                <input type="text" id="multiPromptInput" placeholder="Ask anything to see how different models respond..." class="flex-1 bg-background border border-white/10 rounded-2xl px-6 py-4 focus:outline-none focus:border-teal transition-all">
+                <button onclick="runMultiPrompt()" id="multiPromptBtn" class="bg-teal text-background px-10 py-4 rounded-2xl font-bold hover:shadow-[0_0_20px_rgba(0,245,212,0.4)] transition-all flex items-center justify-center gap-2">
+                    <span>Compare Responses</span>
+                    <div id="multiLoader" class="hidden w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin"></div>
+                </button>
+            </div>
+        </div>
+
+        <div id="multiResults" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Response cards will appear here -->
+            <div class="lg:col-span-3 text-center py-20 text-white/20">
+                Submit a prompt to see side-by-side comparisons
+            </div>
+        </div>
+    </section>
+
+    <!-- FEATURE 4: COMMUNITY RATINGS -->
+    <section id="ratings" class="py-24 px-6 bg-card/30 reveal">
+        <div class="max-w-7xl mx-auto">
+            <span class="feature-label">Feature 04</span>
+            <h2 class="text-4xl font-syne font-bold mb-12">Community Ratings</h2>
+            
+            <div id="ratingsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <!-- Ratings cards injected by JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- FEATURE 5: NO-CODE AGENT BUILDER -->
+    <section id="builder" class="py-24 px-6 max-w-7xl mx-auto reveal">
+        <span class="feature-label">Feature 05</span>
+        <h2 class="text-4xl font-syne font-bold mb-12">No-Code Agent Builder</h2>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            <!-- Form -->
+            <div class="glass p-8 rounded-3xl">
+                <div class="mb-6">
+                    <label class="block text-sm font-bold mb-2 text-white/70">Agent Name</label>
+                    <input type="text" id="builderName" oninput="updatePreview()" placeholder="e.g. Thesis Assistant" class="w-full bg-background border border-white/10 rounded-xl px-4 py-3 focus:border-accent outline-none">
+                </div>
+                <div class="mb-6">
+                    <label class="block text-sm font-bold mb-2 text-white/70">Category</label>
+                    <div class="flex flex-wrap gap-2" id="categoryChips">
+                        <button onclick="selectCategory('Coding')" class="chip px-4 py-2 rounded-full border border-white/10 text-xs font-bold hover:border-accent transition-all">Coding</button>
+                        <button onclick="selectCategory('Productivity')" class="chip px-4 py-2 rounded-full border border-white/10 text-xs font-bold hover:border-accent transition-all">Productivity</button>
+                        <button onclick="selectCategory('Research')" class="chip px-4 py-2 rounded-full border border-white/10 text-xs font-bold hover:border-accent transition-all">Research</button>
+                        <button onclick="selectCategory('Writing')" class="chip px-4 py-2 rounded-full border border-white/10 text-xs font-bold hover:border-accent transition-all">Writing</button>
+                        <button onclick="selectCategory('Student')" class="chip px-4 py-2 rounded-full border border-white/10 text-xs font-bold hover:border-accent transition-all active bg-accent border-accent">Student</button>
+                        <button onclick="selectCategory('Business')" class="chip px-4 py-2 rounded-full border border-white/10 text-xs font-bold hover:border-accent transition-all">Business</button>
+                    </div>
+                </div>
+                <div class="mb-8">
+                    <label class="block text-sm font-bold mb-2 text-white/70">Prompt Template</label>
+                    <textarea id="builderPrompt" oninput="updatePreview()" rows="4" placeholder="You are an expert in..." class="w-full bg-background border border-white/10 rounded-xl px-4 py-3 focus:border-accent outline-none resize-none"></textarea>
+                </div>
+                <button onclick="publishAgent()" class="w-full bg-accent py-4 rounded-xl font-bold hover:bg-accent/80 transition-all">Publish Agent</button>
+            </div>
+
+            <!-- Preview -->
+            <div class="flex flex-col justify-center">
+                <h3 class="text-xl font-syne font-bold mb-6 flex items-center gap-2">
+                    Live Preview <span class="text-teal text-sm">●</span>
+                </h3>
+                <div id="previewCard" class="glass p-8 rounded-3xl border-teal/30 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-4">
+                        <span class="bg-teal/20 text-teal text-[10px] font-bold px-2 py-1 rounded">PREVIEW</span>
+                    </div>
+                    <div class="text-4xl mb-4" id="previewEmoji">🤖</div>
+                    <h4 class="text-2xl font-syne font-bold mb-2" id="previewName">Your Agent Name</h4>
+                    <div class="text-accent text-xs font-bold mb-4 uppercase tracking-widest" id="previewCategory">Student</div>
+                    <p class="text-white/60 text-sm leading-relaxed" id="previewDesc">Start typing to see your agent's description update in real-time...</p>
+                    <div class="mt-8 pt-6 border-t border-white/5 flex justify-between items-center">
+                        <div class="flex gap-1">
+                            <span class="text-yellow">★</span>
+                            <span class="text-yellow">★</span>
+                            <span class="text-yellow">★</span>
+                            <span class="text-yellow">★</span>
+                            <span class="text-yellow">★</span>
+                        </div>
+                        <span class="text-white/30 text-xs">0 Reviews</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-20">
+            <h3 class="text-2xl font-syne font-bold mb-8">Community Gallery</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="glass p-6 rounded-2xl border-white/5">
+                    <div class="text-2xl mb-3">������</div>
+                    <h5 class="font-bold mb-1">Essay Polisher</h5>
+                    <p class="text-xs text-white/50 mb-4">By @Sarah_Study</p>
+                    <button class="text-teal text-xs font-bold hover:underline">Use Agent →</button>
+                </div>
+                <div class="glass p-6 rounded-2xl border-white/5">
+                    <div class="text-2xl mb-3">🧬</div>
+                    <h5 class="font-bold mb-1">Bio-Term Explainer</h5>
+                    <p class="text-xs text-white/50 mb-4">By @MedStudent99</p>
+                    <button class="text-teal text-xs font-bold hover:underline">Use Agent →</button>
+                </div>
+                <div class="glass p-6 rounded-2xl border-white/5">
+                    <div class="text-2xl mb-3">⚖️</div>
+                    <h5 class="font-bold mb-1">Case Law Summarizer</h5>
+                    <p class="text-xs text-white/50 mb-4">By @LawLearner</p>
+                    <button class="text-teal text-xs font-bold hover:underline">Use Agent →</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FEATURE 6: STUDENT SECTION -->
+    <section id="students" class="py-24 px-6 bg-accent/5 reveal">
+        <div class="max-w-7xl mx-auto">
+            <span class="feature-label">Feature 06</span>
+            <h2 class="text-4xl font-syne font-bold mb-12">Student Success Hub</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
+                <!-- Assignment Helper -->
+                <div class="glass p-8 rounded-3xl border-accent/20 hover:border-accent/50 transition-all">
+                    <div class="w-12 h-12 bg-accent/20 rounded-xl flex items-center justify-center mb-6">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6C63FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    </div>
+                    <h4 class="text-xl font-bold mb-4">Assignment Helper</h4>
+                    <ul class="space-y-3 mb-8">
+                        <li class="flex justify-between items-center text-sm text-white/70">
+                            <span>Claude</span>
+                            <span class="text-teal">→</span>
+                        </li>
+                        <li class="flex justify-between items-center text-sm text-white/70">
+                            <span>Notion AI</span>
+                            <span class="text-teal">→</span>
+                        </li>
+                        <li class="flex justify-between items-center text-sm text-white/70">
+                            <span>ChatGPT</span>
+                            <span class="text-teal">→</span>
+                        </li>
+                    </ul>
+                    <button class="text-accent font-bold text-sm hover:underline">View All Writing Tools</button>
+                </div>
+
+                <!-- Code Explainer -->
+                <div class="glass p-8 rounded-3xl border-teal/20 hover:border-teal/50 transition-all">
+                    <div class="w-12 h-12 bg-teal/20 rounded-xl flex items-center justify-center mb-6">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00F5D4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                    </div>
+                    <h4 class="text-xl font-bold mb-4">Code Explainer</h4>
+                    <ul class="space-y-3 mb-8">
+                        <li class="flex justify-between items-center text-sm text-white/70">
+                            <span>Windsurf IDE</span>
+                            <span class="text-teal">→</span>
+                        </li>
+                        <li class="flex justify-between items-center text-sm text-white/70">
+                            <span>Cursor</span>
+                            <span class="text-teal">→</span>
+                        </li>
+                        <li class="flex justify-between items-center text-sm text-white/70">
+                            <span>GitHub Copilot</span>
+                            <span class="text-teal">→</span>
+                        </li>
+                    </ul>
+                    <button class="text-teal font-bold text-sm hover:underline">View All Coding Tools</button>
+                </div>
+
+                <!-- Career Prep -->
+                <div class="glass p-8 rounded-3xl border-yellow/20 hover:border-yellow/50 transition-all">
+                    <div class="w-12 h-12 bg-yellow/20 rounded-xl flex items-center justify-center mb-6">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFD93D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                    </div>
+                    <h4 class="text-xl font-bold mb-4">Career Prep</h4>
+                    <ul class="space-y-3 mb-8">
+                        <li class="flex justify-between items-center text-sm text-white/70">
+                            <span>Perplexity AI</span>
+                            <span class="text-teal">→</span>
+                        </li>
+                        <li class="flex justify-between items-center text-sm text-white/70">
+                            <span>Canva AI</span>
+                            <span class="text-teal">→</span>
+                        </li>
+                        <li class="flex justify-between items-center text-sm text-white/70">
+                            <span>ElevenLabs</span>
+                            <span class="text-teal">→</span>
+                        </li>
+                    </ul>
+                    <button class="text-yellow font-bold text-sm hover:underline">View All Career Tools</button>
+                </div>
+            </div>
+
+            <!-- Spotlight -->
+            <div class="glass p-12 rounded-3xl flex flex-col md:flex-row items-center gap-12 border-white/5">
+                <div class="w-48 h-48 rounded-full overflow-hidden border-4 border-accent p-2">
+                    <img src="https://picsum.photos/seed/student/200/200" alt="Student" class="w-full h-full object-cover rounded-full">
+                </div>
+                <div class="flex-1 text-center md:text-left">
+                    <span class="bg-accent text-white text-[10px] font-bold px-3 py-1 rounded-full mb-4 inline-block">STUDENT OF THE WEEK</span>
+                    <h3 class="text-3xl font-syne font-bold mb-4">Alex Rivera</h3>
+                    <p class="text-white/60 mb-6 italic">"Using Windsurf IDE and Perplexity together helped me build my first full-stack app for my computer science thesis in just 3 weeks. AgentVerse made finding these tools so easy!"</p>
+                    <div class="flex flex-wrap gap-3 justify-center md:justify-start">
+                        <span class="bg-white/5 px-4 py-2 rounded-full text-xs font-bold">CS Major @ Stanford</span>
+                        <span class="bg-white/5 px-4 py-2 rounded-full text-xs font-bold">3 Agents Built</span>
+                    </div>
+                </div>
+                <button class="bg-accent text-white px-10 py-5 rounded-2xl font-bold hover:bg-accent/80 transition-all whitespace-nowrap">
+                    Find Your Study Agent
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-12 px-6 border-t border-white/5 text-center">
+        <div class="text-2xl font-syne font-extrabold tracking-tighter flex justify-center items-center gap-2 mb-6">
+            <span class="text-accent">AgentVerse</span>
+            <span class="text-teal">✦</span>
+        </div>
+        <p class="text-white/30 text-sm mb-8">© 2026 AgentVerse AI. Empowering students with the best AI tools on the planet.</p>
+        <div class="flex justify-center gap-6 text-white/50 text-xs uppercase tracking-widest font-bold">
+            <a href="#" class="hover:text-teal transition-all">Twitter</a>
+            <a href="#" class="hover:text-teal transition-all">Discord</a>
+            <a href="#" class="hover:text-teal transition-all">GitHub</a>
+            <a href="#" class="hover:text-teal transition-all">Privacy</a>
+        </div>
+    </footer>
+
+    <div id="toast" class="toast">Agent Published Successfully! 🚀</div>
+
+    <script>
+        // AGENT DATABASE
+        const agents = [
+            // General Task
+            { name: "ChatGPT", emoji: "🤖", category: "General Task", desc: "Best all-rounder for writing, Q&A, and brainstorming", cost: "Free/$20", starred: true, speed: 95, accuracy: "High", rating: 4.7, reviews: 12500 },
+            { name: "Claude", emoji: "🧠", category: "General Task", desc: "Best for long documents, analysis, and nuanced reasoning", cost: "Free/$20", speed: 85, accuracy: "Very High", rating: 4.8, reviews: 8900 },
+            { name: "Google Gemini", emoji: "✨", category: "General Task", desc: "Best for Google integration and real-time search", cost: "Free/$20", speed: 90, accuracy: "High", rating: 4.5, reviews: 10200 },
+            // Coding
+            { name: "Windsurf IDE", emoji: "🌊", category: "Coding", desc: "AI code editor with full codebase awareness", cost: "Free/$15", starred: true, speed: 88, accuracy: "Very High", rating: 4.9, reviews: 2341 },
+            { name: "Cursor", emoji: "⚡", category: "Coding", desc: "AI-first IDE with powerful autocomplete", cost: "Free/$20", starred: true, speed: 92, accuracy: "Very High", rating: 4.9, reviews: 1876 },
+            { name: "GitHub Copilot", emoji: "🐙", category: "Coding", desc: "In-editor AI pair programmer by GitHub", cost: "$10/mo", speed: 80, accuracy: "High", rating: 4.6, reviews: 15400 },
+            { name: "Amazon CodeWhisperer", emoji: "☁️", category: "Coding", desc: "AWS-native code suggestions", cost: "Free/$19", speed: 75, accuracy: "Medium", rating: 4.2, reviews: 3200 },
+            // Image Creation
+            { name: "Midjourney", emoji: "🎨", category: "Image Creation", desc: "Stunning photorealistic and artistic AI images", cost: "$10/mo", speed: 60, accuracy: "Very High", rating: 4.9, reviews: 25000 },
+            { name: "DALL-E", emoji: "🖼️", category: "Image Creation", desc: "OpenAI image generation integrated with ChatGPT", cost: "Credits", speed: 85, accuracy: "High", rating: 4.4, reviews: 18000 },
+            { name: "Canva AI", emoji: "🎭", category: "Image Creation", desc: "Design anything with Magic AI tools", cost: "Free/$13", starred: true, speed: 90, accuracy: "High", rating: 4.6, reviews: 3104 },
+            // Video Creation
+            { name: "Runway ML", emoji: "🎬", category: "Video Creation", desc: "AI video generation and editing studio", cost: "$15/mo", speed: 50, accuracy: "High", rating: 4.7, reviews: 4500 },
+            { name: "Synthesia", emoji: "🎥", category: "Video Creation", desc: "AI avatar video creator for presentations", cost: "$30/mo", speed: 45, accuracy: "High", rating: 4.5, reviews: 2100 },
+            // Voice & Audio
+            { name: "ElevenLabs", emoji: "🎙️", category: "Voice & Audio", desc: "Ultra-realistic AI voice cloning and synthesis", cost: "Free/$5", speed: 80, accuracy: "Very High", rating: 4.8, reviews: 6700 },
+            { name: "Murf AI", emoji: "🔊", category: "Voice & Audio", desc: "Studio-quality AI voiceovers", cost: "Free/$19", speed: 75, accuracy: "High", rating: 4.6, reviews: 1800 },
+            // Productivity
+            { name: "Notion AI", emoji: "📓", category: "Productivity", desc: "AI writing and summarization inside Notion", cost: "$10/mo", speed: 90, accuracy: "High", rating: 4.7, reviews: 9200 },
+            { name: "Zapier", emoji: "⚡", category: "Productivity", desc: "Automate tasks between 5000+ apps with AI", cost: "Free/$20", speed: 85, accuracy: "Medium", rating: 4.5, reviews: 5600 },
+            // Data & Research
+            { name: "Wolfram Alpha", emoji: "📊", category: "Data Analysis", desc: "Computational intelligence for math and science", cost: "Free/$7.25", speed: 70, accuracy: "Very High", rating: 4.8, reviews: 12000 },
+            { name: "Perplexity AI", emoji: "🔍", category: "Data Analysis", desc: "AI search with real-time citations", cost: "Free/$20", starred: true, speed: 95, accuracy: "Very High", rating: 4.8, reviews: 1892 }
+        ];
+
+        let selectedCategory = 'Student';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            renderComparisonTable();
+            renderRatings();
+            setupRevealAnimations();
+        });
+
+        // Reveal Animations
+        function setupRevealAnimations() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('active');
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+        }
+
+        // FEATURE 1: MATCHMAKER
+        async function runMatchmaker() {
+            const apiKey = document.getElementById('apiKeyInput').value;
+            const input = document.getElementById('matchmakerInput').value;
+            const btn = document.getElementById('matchmakerBtn');
+            const loader = document.getElementById('matchmakerLoader');
+            const resultsDiv = document.getElementById('matchmakerResults');
+
+            if (!apiKey) return alert("Please enter your Anthropic API Key at the top of the page.");
+            if (!input) return alert("Please describe your problem.");
+
+            btn.disabled = true;
+            loader.classList.remove('hidden');
+            resultsDiv.innerHTML = '<div class="col-span-full text-center py-12 text-teal animate-pulse">Claude is analyzing your request...</div>';
+
+            const agentNames = agents.map(a => a.name).join(", ");
+            const prompt = `You are an AI Agent Matchmaker. Based on this user problem: "${input}", select the 4 best matching AI agents from this list: [${agentNames}]. 
+            Return ONLY a valid JSON array of 4 objects, each with "name" (must match the list exactly) and "matchScore" (a number from 0-100). 
+            Example: [{"name": "ChatGPT", "matchScore": 95}, ...]`;
+
+            try {
+                const response = await fetch("https://api.anthropic.com/v1/messages", {
+                    method: "POST",
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "x-api-key": apiKey,
+                        "anthropic-version": "2023-06-01"
+                    },
+                    body: JSON.stringify({
+                        model: "claude-sonnet-4-20250514",
+                        max_tokens: 1000,
+                        messages: [{ role: "user", content: prompt }]
+                    })
+                });
+
+                const data = await response.json();
+                if (data.error) throw new Error(data.error.message);
+
+                const content = data.content[0].text;
+                const matches = JSON.parse(content.substring(content.indexOf('['), content.lastIndexOf(']') + 1));
+                
+                resultsDiv.innerHTML = '';
+                matches.forEach(match => {
+                    const agent = agents.find(a => a.name === match.name);
+                    if (agent) {
+                        resultsDiv.innerHTML += `
+                            <div class="glass p-6 rounded-2xl border-accent/20 hover:border-accent transition-all transform hover:-translate-y-2">
+                                <div class="text-3xl mb-4">${agent.emoji}</div>
+                                <h4 class="font-syne font-bold text-lg mb-1">${agent.name}</h4>
+                                <p class="text-xs text-white/50 mb-4 h-12 overflow-hidden">${agent.desc}</p>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-[10px] font-bold text-teal bg-teal/10 px-2 py-1 rounded">MATCH: ${match.matchScore}%</span>
+                                    <button class="text-accent text-xs font-bold">Details →</button>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+            } catch (error) {
+                console.error(error);
+                resultsDiv.innerHTML = `<div class="col-span-full text-center py-12 text-red">Error: ${error.message}. Make sure your API key is correct and allows browser requests.</div>`;
+            } finally {
+                btn.disabled = false;
+                loader.classList.add('hidden');
+            }
+        }
+
+        // FEATURE 2: COMPARISON TABLE
+        function renderComparisonTable() {
+            const compareAgents = ["ChatGPT", "Claude", "Google Gemini", "Cursor", "Windsurf IDE", "Perplexity AI", "Canva AI"];
+            const tbody = document.getElementById('comparisonTableBody');
+            tbody.innerHTML = '';
+
+            compareAgents.forEach(name => {
+                const agent = agents.find(a => a.name === name);
+                if (!agent) return;
+
+                const accuracyColor = agent.accuracy === "Very High" ? "text-teal bg-teal/10" : (agent.accuracy === "High" ? "text-accent bg-accent/10" : "text-yellow bg-yellow/10");
+
+                tbody.innerHTML += `
+                    <tr class="border-b border-white/5 hover:bg-white/5 transition-all">
+                        <td class="p-6">
+                            <div class="flex items-center gap-3">
+                                <span class="text-xl">${agent.emoji}</span>
+                                <span class="font-bold">${agent.name} ${agent.starred ? '⭐' : ''}</span>
+                            </div>
+                        </td>
+                        <td class="p-6">
+                            <div class="w-24 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                <div class="progress-bar h-full bg-teal" style="--progress-width: ${agent.speed}%"></div>
+                            </div>
+                        </td>
+                        <td class="p-6">
+                            <span class="text-[10px] font-bold px-2 py-1 rounded uppercase ${accuracyColor}">${agent.accuracy}</span>
+                        </td>
+                        <td class="p-6 text-sm text-white/60">${agent.category}</td>
+                        <td class="p-6 text-sm font-mono text-teal">${agent.cost}</td>
+                        <td class="p-6 text-sm font-bold text-yellow">★ ${agent.rating}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // FEATURE 3: MULTI-PROMPT
+        async function runMultiPrompt() {
+            const apiKey = document.getElementById('apiKeyInput').value;
+            const prompt = document.getElementById('multiPromptInput').value;
+            const btn = document.getElementById('multiPromptBtn');
+            const loader = document.getElementById('multiLoader');
+            const resultsDiv = document.getElementById('multiResults');
+
+            if (!apiKey) return alert("Please enter your Anthropic API Key.");
+            if (!prompt) return alert("Please enter a prompt.");
+
+            btn.disabled = true;
+            loader.classList.remove('hidden');
+            resultsDiv.innerHTML = `
+                <div class="glass p-8 rounded-3xl animate-pulse flex flex-col gap-4">
+                    <div class="h-4 bg-white/10 rounded w-1/2"></div>
+                    <div class="h-20 bg-white/10 rounded"></div>
+                </div>
+                <div class="glass p-8 rounded-3xl animate-pulse flex flex-col gap-4">
+                    <div class="h-4 bg-white/10 rounded w-1/2"></div>
+                    <div class="h-20 bg-white/10 rounded"></div>
+                </div>
+                <div class="glass p-8 rounded-3xl animate-pulse flex flex-col gap-4">
+                    <div class="h-4 bg-white/10 rounded w-1/2"></div>
+                    <div class="h-20 bg-white/10 rounded"></div>
+                </div>
+            `;
+
+            const configs = [
+                { name: "ChatGPT", emoji: "🤖", system: "You are ChatGPT. Answer in ChatGPT's style. Be helpful, conversational, and structured." },
+                { name: "Claude", emoji: "🧠", system: "You are Claude by Anthropic. Answer thoughtfully, accurately, and with a focus on safety and nuance." },
+                { name: "Google Gemini", emoji: "✨", system: "You are Google Gemini. Answer concisely, focus on facts, and be direct." }
+            ];
+
+            try {
+                const promises = configs.map(config => 
+                    fetch("https://api.anthropic.com/v1/messages", {
+                        method: "POST",
+                        headers: { 
+                            "Content-Type": "application/json",
+                            "x-api-key": apiKey,
+                            "anthropic-version": "2023-06-01"
+                        },
+                        body: JSON.stringify({
+                            model: "claude-sonnet-4-20250514",
+                            max_tokens: 1000,
+                            system: config.system,
+                            messages: [{ role: "user", content: prompt }]
+                        })
+                    }).then(res => res.json())
+                );
+
+                const responses = await Promise.all(promises);
+                
+                resultsDiv.innerHTML = '';
+                responses.forEach((res, i) => {
+                    const text = res.content ? res.content[0].text : "Error fetching response.";
+                    resultsDiv.innerHTML += `
+                        <div class="glass p-8 rounded-3xl border-white/5 flex flex-col h-full">
+                            <div class="flex items-center gap-3 mb-6">
+                                <span class="text-2xl">${configs[i].emoji}</span>
+                                <h4 class="font-syne font-bold text-xl">${configs[i].name}</h4>
+                            </div>
+                            <div class="text-sm text-white/70 leading-relaxed mb-8 flex-1">
+                                ${text.replace(/\n/g, '<br>')}
+                            </div>
+                            <div class="pt-6 border-t border-white/5 flex gap-4">
+                                <button class="flex-1 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all text-xs font-bold">👍 Vote</button>
+                                <button class="flex-1 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all text-xs font-bold">⭐ Star</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="col-span-full text-center py-12 text-red">Error: ${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                loader.classList.add('hidden');
+            }
+        }
+
+        // FEATURE 4: RATINGS
+        function renderRatings() {
+            const grid = document.getElementById('ratingsGrid');
+            grid.innerHTML = '';
+            
+            const ratingAgents = agents.filter(a => ["Windsurf IDE", "Perplexity AI", "Canva AI", "Cursor"].includes(a.name));
+            
+            ratingAgents.forEach(agent => {
+                grid.innerHTML += `
+                    <div class="glass p-8 rounded-3xl border-white/5 relative group">
+                        <div class="absolute -top-3 -right-3 bg-red text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg">🔥 TRENDING</div>
+                        <div class="text-4xl mb-6">${agent.emoji}</div>
+                        <h4 class="font-syne font-bold text-xl mb-2">${agent.name}</h4>
+                        <p class="text-xs text-white/50 mb-6 h-12">${agent.desc}</p>
+                        <div class="flex flex-col gap-2">
+                            <div class="flex gap-1 text-yellow text-lg">
+                                ${[1,2,3,4,5].map(i => `<span class="cursor-pointer hover:scale-125 transition-all" onclick="updateRating('${agent.name}', ${i})">${i <= Math.round(agent.rating) ? '★' : '☆'}</span>`).join('')}
+                            </div>
+                            <div class="flex justify-between items-center text-[10px] font-bold text-white/30 uppercase tracking-widest">
+                                <span>${agent.rating} AVG</span>
+                                <span>${agent.reviews.toLocaleString()} REVIEWS</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function updateRating(name, score) {
+            const agent = agents.find(a => a.name === name);
+            if (agent) {
+                // Simple logic to simulate update
+                agent.reviews += 1;
+                agent.rating = ((agent.rating * (agent.reviews - 1)) + score) / agent.reviews;
+                agent.rating = Math.round(agent.rating * 10) / 10;
+                renderRatings();
+            }
+        }
+
+        // FEATURE 5: BUILDER
+        function selectCategory(cat) {
+            selectedCategory = cat;
+            const chips = document.querySelectorAll('.chip');
+            chips.forEach(chip => {
+                chip.classList.remove('active', 'bg-accent', 'border-accent');
+                if (chip.innerText === cat) {
+                    chip.classList.add('active', 'bg-accent', 'border-accent');
+                }
+            });
+            updatePreview();
+        }
+
+        function updatePreview() {
+            const name = document.getElementById('builderName').value || "Your Agent Name";
+            const prompt = document.getElementById('builderPrompt').value || "Start typing to see your agent's description update in real-time...";
+            
+            document.getElementById('previewName').innerText = name;
+            document.getElementById('previewCategory').innerText = selectedCategory;
+            document.getElementById('previewDesc').innerText = prompt;
+
+            const emojis = { 'Coding': '⚡', 'Productivity': '📅', 'Research': '🔍', 'Writing': '✍️', 'Student': '🎓', 'Business': '💼' };
+            document.getElementById('previewEmoji').innerText = emojis[selectedCategory] || '🤖';
+        }
+
+        function publishAgent() {
+            const name = document.getElementById('builderName').value;
+            if (!name) return alert("Please enter an agent name.");
+            
+            const toast = document.getElementById('toast');
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+
+            // Reset form
+            document.getElementById('builderName').value = '';
+            document.getElementById('builderPrompt').value = '';
+            updatePreview();
+        }
+    </script>
+</body>
+</html>
